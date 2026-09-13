@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmeTV Smart Skip</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-row">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M13 2L4.09 12.64C3.38 13.48 3.91 14.75 5 14.75H11L10 22L18.91 11.36C19.62 10.52 19.09 9.25 18 9.25H12L13 2Z" fill="url(#bolt-grad)" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+            <defs>
+              <linearGradient id="bolt-grad" x1="4" y1="2" x2="20" y2="22">
+                <stop offset="0%" stop-color="#a78bfa"/>
+                <stop offset="100%" stop-color="#6d28d9"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <h1>Smart Skip</h1>
+          <span class="badge">OmeTV</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mode Selector -->
+    <div class="section">
+      <div class="section-label">MODE</div>
+      <div class="mode-selector">
+        <button class="mode-btn active" data-mode="off">
+          <div class="mode-btn-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
+            </svg>
+          </div>
+          <span>Off</span>
+        </button>
+        <button class="mode-btn" data-mode="gesture">
+          <div class="mode-btn-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 11V6a2 2 0 0 0-4 0v5"/>
+              <path d="M14 10V4a2 2 0 0 0-4 0v6"/>
+              <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
+              <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.7-2.4L3.6 16a2 2 0 0 1 3-2.6l.9 1.1"/>
+            </svg>
+          </div>
+          <span>Gesture</span>
+        </button>
+        <button class="mode-btn" data-mode="auto">
+          <div class="mode-btn-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+          </div>
+          <span>Auto</span>
+        </button>
+        <button class="mode-btn" data-mode="both">
+          <div class="mode-btn-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+              <path d="M7 8h10l-1 10H8L7 8Z"/>
+              <path d="M12 12v4M9.5 14.5h5"/>
+            </svg>
+          </div>
+          <span>Both</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="section">
+      <div class="status-bar">
+        <div class="status-left">
+          <div class="status-dot" id="status-dot"></div>
+          <span class="status-text" id="status-text">Inactive</span>
+        </div>
+        <div class="status-right">
+          <span class="skip-counter" id="skip-counter">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>
+            </svg>
+            <span id="skip-count">0</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gesture Settings -->
+    <div class="section settings-panel" id="gesture-settings">
+      <div class="section-label">GESTURE SETTINGS</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">Palm hold</span>
+          <span class="setting-desc">Lower = shorter hold; release to rearm</span>
+        </div>
+        <div class="setting-control">
+          <input type="range" min="15" max="55" value="35" aria-label="sensitivity" id="sensitivity-slider" class="slider">
+          <span class="slider-value" id="sensitivity-value">35%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto Settings -->
+    <div class="section settings-panel" id="auto-settings">
+      <div class="section-label">AUTO MODE SETTINGS</div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">Face confidence</span>
+          <span class="setting-desc">Minimum face detection score</span>
+        </div>
+        <div class="setting-control">
+          <input type="range" min="30" max="90" value="50" aria-label="confidence" id="confidence-slider" class="slider">
+          <span class="slider-value" id="confidence-value">70%</span>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-name">Skip on No Face</span>
+          <span class="setting-desc">Auto-skip if no face found</span>
+        </div>
+        <div class="setting-control toggle-control">
+          <label class="toggle">
+            <input type="checkbox" aria-label="Skip when no face is present" id="no-face-skip" checked>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+        </div>
+      </div>
+      <div class="setting-row" id="timeout-row">
+        <div class="setting-info">
+          <span class="setting-name">No Face Timeout</span>
+          <span class="setting-desc">Seconds before skipping</span>
+        </div>
+        <div class="setting-control">
+          <input type="range" min="3" max="20" value="8" aria-label="timeout" id="timeout-slider" class="slider">
+          <span class="slider-value" id="timeout-value">8s</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section diagnostics"><p id="mode-help">Choose a mode to begin.</p><p id="engine-gesture">Gesture: Off</p><p id="engine-auto">Auto: Off</p><button id="retry-engines">Retry engines</button><details><summary>Recent logs</summary><pre id="recent-logs"></pre></details></div><!-- Footer -->
+    <div class="footer">
+      <span class="footer-hint">Active on <strong>ome.tv</strong></span>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

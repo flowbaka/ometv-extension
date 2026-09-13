@@ -1,0 +1,68 @@
+{
+  "manifest_version": 3,
+  "name": "OmeTV Smart Skip",
+  "version": "1.2.0",
+  "description": "Open-palm gesture skip and local AI face-presence auto skip. Both mode runs both engines.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "*://ome.tv/*",
+    "*://*.ome.tv/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://ome.tv/*",
+        "*://*.ome.tv/*"
+      ],
+      "js": [
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://ome.tv/*",
+        "*://*.ome.tv/*"
+      ],
+      "js": [
+        "vendor/hands/hands.js",
+        "vendor/face/face-api.min.js",
+        "content/injected.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "vendor/hands/*",
+        "models/*"
+      ],
+      "matches": [
+        "*://ome.tv/*",
+        "*://*.ome.tv/*"
+      ]
+    }
+  ]
+}
