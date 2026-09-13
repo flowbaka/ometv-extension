@@ -1,6 +1,6 @@
 {
   "name": "ometv-extension",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Local palm gesture and face-presence detection for OmeTV.",
   "main": "index.js",
   "scripts": {

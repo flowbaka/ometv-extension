@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "OmeTV Smart Skip",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Open-palm gesture skip and local AI face-presence auto skip. Both mode runs both engines.",
   "permissions": [
     "storage"

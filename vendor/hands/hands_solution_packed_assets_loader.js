@@ -1,15 +1,15 @@
 
-  var Module = typeof createMediapipeSolutionsPackedAssets !== 'undefined' ? createMediapipeSolutionsPackedAssets : {};
+  var SmartSkipHandsPackedModule = typeof createSmartSkipHandsPackedAssets !== 'undefined' ? createSmartSkipHandsPackedAssets : {};
 
-  if (!Module.expectedDataFileDownloads) {
-    Module.expectedDataFileDownloads = 0;
+  if (!SmartSkipHandsPackedModule.expectedDataFileDownloads) {
+    SmartSkipHandsPackedModule.expectedDataFileDownloads = 0;
   }
 
-  Module.expectedDataFileDownloads++;
+  SmartSkipHandsPackedModule.expectedDataFileDownloads++;
   (function() {
     // When running as a pthread, FS operations are proxied to the main thread, so we don't need to
     // fetch the .data bundle on the worker
-    if (Module['ENVIRONMENT_IS_PTHREAD']) return;
+    if (SmartSkipHandsPackedModule['ENVIRONMENT_IS_PTHREAD']) return;
     var loadPackage = function(metadata) {
 
       var PACKAGE_PATH = '';
@@ -21,11 +21,11 @@
       }
       var PACKAGE_NAME = 'blaze-out/k8-opt/genfiles/third_party/mediapipe/web/solutions/hands/hands_solution_packed_assets.data';
       var REMOTE_PACKAGE_BASE = 'hands_solution_packed_assets.data';
-      if (typeof Module['locateFilePackage'] === 'function' && !Module['locateFile']) {
-        Module['locateFile'] = Module['locateFilePackage'];
-        err('warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)');
+      if (typeof SmartSkipHandsPackedModule['locateFilePackage'] === 'function' && !SmartSkipHandsPackedModule['locateFile']) {
+        SmartSkipHandsPackedModule['locateFile'] = SmartSkipHandsPackedModule['locateFilePackage'];
+        err('warning: you defined SmartSkipHandsPackedModule.locateFilePackage, that has been renamed to SmartSkipHandsPackedModule.locateFile (using your locateFilePackage for now)');
       }
-      var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
+      var REMOTE_PACKAGE_NAME = SmartSkipHandsPackedModule['locateFile'] ? SmartSkipHandsPackedModule['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
 var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 
       function fetchRemotePackage(packageName, packageSize, callback, errback) {
@@ -49,27 +49,27 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
           if (event.loaded) {
             if (!xhr.addedTotal) {
               xhr.addedTotal = true;
-              if (!Module.dataFileDownloads) Module.dataFileDownloads = {};
-              Module.dataFileDownloads[url] = {
+              if (!SmartSkipHandsPackedModule.dataFileDownloads) SmartSkipHandsPackedModule.dataFileDownloads = {};
+              SmartSkipHandsPackedModule.dataFileDownloads[url] = {
                 loaded: event.loaded,
                 total: size
               };
             } else {
-              Module.dataFileDownloads[url].loaded = event.loaded;
+              SmartSkipHandsPackedModule.dataFileDownloads[url].loaded = event.loaded;
             }
             var total = 0;
             var loaded = 0;
             var num = 0;
-            for (var download in Module.dataFileDownloads) {
-            var data = Module.dataFileDownloads[download];
+            for (var download in SmartSkipHandsPackedModule.dataFileDownloads) {
+            var data = SmartSkipHandsPackedModule.dataFileDownloads[download];
               total += data.total;
               loaded += data.loaded;
               num++;
             }
-            total = Math.ceil(total * Module.expectedDataFileDownloads/num);
-            if (Module['setStatus']) Module['setStatus']('Downloading data... (' + loaded + '/' + total + ')');
-          } else if (!Module.dataFileDownloads) {
-            if (Module['setStatus']) Module['setStatus']('Downloading data...');
+            total = Math.ceil(total * SmartSkipHandsPackedModule.expectedDataFileDownloads/num);
+            if (SmartSkipHandsPackedModule['setStatus']) SmartSkipHandsPackedModule['setStatus']('Downloading data... (' + loaded + '/' + total + ')');
+          } else if (!SmartSkipHandsPackedModule.dataFileDownloads) {
+            if (SmartSkipHandsPackedModule['setStatus']) SmartSkipHandsPackedModule['setStatus']('Downloading data...');
           }
         };
         xhr.onerror = function(event) {
@@ -91,7 +91,7 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
       };
 
       var fetchedCallback = null;
-      var fetched = Module['getPreloadedPackage'] ? Module['getPreloadedPackage'](REMOTE_PACKAGE_NAME, REMOTE_PACKAGE_SIZE) : null;
+      var fetched = SmartSkipHandsPackedModule['getPreloadedPackage'] ? SmartSkipHandsPackedModule['getPreloadedPackage'](REMOTE_PACKAGE_NAME, REMOTE_PACKAGE_SIZE) : null;
 
       if (!fetched) fetchRemotePackage(REMOTE_PACKAGE_NAME, REMOTE_PACKAGE_SIZE, function(data) {
         if (fetchedCallback) {
@@ -107,11 +107,11 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
       function assert(check, msg) {
         if (!check) throw msg + new Error().stack;
       }
-Module['FS_createPath']("/", "third_party", true, true);
-Module['FS_createPath']("/third_party", "mediapipe", true, true);
-Module['FS_createPath']("/third_party/mediapipe", "modules", true, true);
-Module['FS_createPath']("/third_party/mediapipe/modules", "hand_landmark", true, true);
-Module['FS_createPath']("/third_party/mediapipe/modules", "palm_detection", true, true);
+SmartSkipHandsPackedModule['FS_createPath']("/", "third_party", true, true);
+SmartSkipHandsPackedModule['FS_createPath']("/third_party", "mediapipe", true, true);
+SmartSkipHandsPackedModule['FS_createPath']("/third_party/mediapipe", "modules", true, true);
+SmartSkipHandsPackedModule['FS_createPath']("/third_party/mediapipe/modules", "hand_landmark", true, true);
+SmartSkipHandsPackedModule['FS_createPath']("/third_party/mediapipe/modules", "palm_detection", true, true);
 
       /** @constructor */
       function DataRequest(start, end, audio) {
@@ -124,7 +124,7 @@ Module['FS_createPath']("/third_party/mediapipe/modules", "palm_detection", true
         open: function(mode, name) {
           this.name = name;
           this.requests[name] = this;
-          Module['addRunDependency']('fp ' + this.name);
+          SmartSkipHandsPackedModule['addRunDependency']('fp ' + this.name);
         },
         send: function() {},
         onload: function() {
@@ -134,11 +134,11 @@ Module['FS_createPath']("/third_party/mediapipe/modules", "palm_detection", true
         finish: function(byteArray) {
           var that = this;
           
-          Module['FS_createPreloadedFile'](this.name, null, byteArray, true, true, function() {
-            Module['removeRunDependency']('fp ' + that.name);
+          SmartSkipHandsPackedModule['FS_createPreloadedFile'](this.name, null, byteArray, true, true, function() {
+            SmartSkipHandsPackedModule['removeRunDependency']('fp ' + that.name);
           }, function() {
             if (that.audio) {
-              Module['removeRunDependency']('fp ' + that.name); // workaround for chromium bug 124926 (still no audio with this, but at least we don't hang)
+              SmartSkipHandsPackedModule['removeRunDependency']('fp ' + that.name); // workaround for chromium bug 124926 (still no audio with this, but at least we don't hang)
             } else {
               err('Preloading file ' + that.name + ' failed');
             }
@@ -163,14 +163,14 @@ Module['FS_createPath']("/third_party/mediapipe/modules", "palm_detection", true
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_blaze-out/k8-opt/genfiles/third_party/mediapipe/web/solutions/hands/hands_solution_packed_assets.data');
+          }          SmartSkipHandsPackedModule['removeRunDependency']('datafile_blaze-out/k8-opt/genfiles/third_party/mediapipe/web/solutions/hands/hands_solution_packed_assets.data');
 
       };
-      Module['addRunDependency']('datafile_blaze-out/k8-opt/genfiles/third_party/mediapipe/web/solutions/hands/hands_solution_packed_assets.data');
+      SmartSkipHandsPackedModule['addRunDependency']('datafile_blaze-out/k8-opt/genfiles/third_party/mediapipe/web/solutions/hands/hands_solution_packed_assets.data');
 
-      if (!Module.preloadResults) Module.preloadResults = {};
+      if (!SmartSkipHandsPackedModule.preloadResults) SmartSkipHandsPackedModule.preloadResults = {};
 
-      Module.preloadResults[PACKAGE_NAME] = {fromCache: false};
+      SmartSkipHandsPackedModule.preloadResults[PACKAGE_NAME] = {fromCache: false};
       if (fetched) {
         processPackageData(fetched);
         fetched = null;
@@ -179,11 +179,11 @@ Module['FS_createPath']("/third_party/mediapipe/modules", "palm_detection", true
       }
 
     }
-    if (Module['calledRun']) {
+    if (SmartSkipHandsPackedModule['calledRun']) {
       runWithFS();
     } else {
-      if (!Module['preRun']) Module['preRun'] = [];
-      Module["preRun"].push(runWithFS); // FS is not initialized yet, wait for it
+      if (!SmartSkipHandsPackedModule['preRun']) SmartSkipHandsPackedModule['preRun'] = [];
+      SmartSkipHandsPackedModule["preRun"].push(runWithFS); // FS is not initialized yet, wait for it
     }
 
     }

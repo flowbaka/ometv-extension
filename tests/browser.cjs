@@ -16,10 +16,18 @@ const assert = require('node:assert/strict');
   try {
     browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--enable-unsafe-swiftshader'] });
     const page = await browser.newPage();
+    const browserLogs = [];
+    page.on('console', message => browserLogs.push({ type: message.type(), text: message.text() }));
     const base = `http://127.0.0.1:${server.address().port}/`;
     await page.goto(base + 'popup/popup.html');
     await page.addScriptTag({ url: base + 'vendor/hands/hands.js' });
     await page.addScriptTag({ url: base + 'vendor/face/face-api.min.js' });
+    await page.evaluate(() => {
+      // Other page libraries can own these Emscripten names. Ours must never touch them.
+      for (const name of ['Module', 'createMediapipeSolutionsWasm', 'createMediapipeSolutionsPackedAssets']) {
+        Object.defineProperty(window, name, { configurable: true, get() { throw new Error('Host runtime collision: ' + name); }, set() { throw new Error('Host runtime overwritten: ' + name); } });
+      }
+    });
     const timings = await page.evaluate(async base => {
       const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 240;
       canvas.getContext('2d').fillRect(0,0,320,240);
@@ -29,15 +37,23 @@ const assert = require('node:assert/strict');
       const start = performance.now(); await hands.initialize(); await hands.send({ image: canvas });
       const handMs = performance.now() - start;
       const warmHandStart = performance.now(); await hands.send({ image: canvas }); const warmHandMs = Math.round(performance.now() - warmHandStart); await hands.close();
+      const retryHands = new Hands({ locateFile: file => base + 'vendor/hands/' + file });
+      retryHands.setOptions({ maxNumHands: 1, modelComplexity: 0 });
+      let retryResult; retryHands.onResults(value => retryResult = value);
+      await retryHands.initialize(); await retryHands.send({ image: canvas }); await retryHands.close();
       await faceapi.nets.tinyFaceDetector.loadFromUri(base + 'models');
       const faceStart = performance.now();
       const face = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 224 }));
       const coldFaceMs = Math.round(performance.now() - faceStart);
       const warmFaceStart = performance.now(); await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 224 })); const warmFaceMs = Math.round(performance.now() - warmFaceStart);
       const confirm = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }));
-      return { warmHandMs, warmFaceMs, handMs: Math.round(handMs), faceMs: coldFaceMs, hands: result.multiHandLandmarks.length, face: !!face, confirmFace: !!confirm };
+      return { warmHandMs, warmFaceMs, handMs: Math.round(handMs), faceMs: coldFaceMs, hands: result.multiHandLandmarks.length, retryHands: retryResult.multiHandLandmarks.length, face: !!face, confirmFace: !!confirm };
     }, base);
     assert.equal(timings.hands, 0); assert.equal(timings.face, false); assert.equal(timings.confirmFace, false);
+    assert.equal(timings.retryHands, 0);
+    const startupLogs = browserLogs.filter(entry => /Successfully created a WebGL context/.test(entry.text));
+    assert.ok(startupLogs.length > 0); assert.ok(startupLogs.every(entry => entry.type === 'info'));
+    assert.equal(browserLogs.some(entry => /Aborted\(|Host runtime collision|Host runtime overwritten/.test(entry.text)), false);
     console.log('Real packaged model smoke test:', timings);
     await page.addInitScript(() => {
       const data = { mode:'both', swipeSensitivity:35, faceConfidence:50, skipOnNoFace:true, noFaceTimeout:8, skipCount:2 };
@@ -61,7 +77,7 @@ const assert = require('node:assert/strict');
     await page.evaluate(() => {
       document.body.innerHTML = '<div id="app"><button class="buttons__next" hidden>Next</button><button class="buttons__next" id="real-next">Next</button></div>';
       window.clicks = 0; document.querySelector('#real-next').onclick = () => window.clicks++;
-      chrome.runtime = { getURL: () => 'chrome-extension://' + 'a'.repeat(32) + '/', onMessage: {addListener() {}} };
+      chrome.runtime = { id: 'a'.repeat(32), getURL: () => 'chrome-extension://' + 'a'.repeat(32) + '/', onMessage: {addListener() {}} };
     });
     await page.addScriptTag({ url: base + 'content/content.js' });
     await page.evaluate(() => window.postMessage({type:'OMETV_EXT_SKIP',reason:'gesture'}, location.origin));
@@ -85,5 +101,18 @@ const assert = require('node:assert/strict');
     await page.waitForTimeout(100);
     assert.equal(await page.evaluate(() => window.clicks), 1);
     console.log('Hidden duplicate buttons, disabled Next, and Off protection passed.');
+    const invalidationErrors = [];
+    page.on('pageerror', error => invalidationErrors.push(error.message));
+    await page.evaluate(() => {
+      window.stopMessages = 0;
+      window.addEventListener('message', event => { if (event.data?.type === 'OMETV_EXT_STOP') window.stopMessages++; });
+      chrome.runtime.getURL = () => { throw new Error('Extension context invalidated.'); };
+    });
+    await page.locator('#ss-retry').click();
+    await page.waitForFunction(() => window.stopMessages === 1);
+    assert.ok(await page.locator('#ss-gesture').textContent().then(text => text.includes('reload this OmeTV tab')));
+    assert.ok(await page.locator('#ss-retry').isDisabled());
+    assert.equal(invalidationErrors.length, 0);
+    console.log('Invalidated extension context is handled without an uncaught error; engine receives STOP.');
   } finally { await browser?.close(); server.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

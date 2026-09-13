@@ -1,9 +1,15 @@
-# Smart Skip 1.2
+# Smart Skip 1.2.1
 
 Three active modes, plus Off:
 - Gesture: hold an open palm in your own camera. Lower your hand before another skip. Palm hold controls the required hold duration (150–550 ms).
 - Auto: local face-presence detection skips after a continuous no-face timeout. It does not classify gender or identity.
 - Both: both engines are enabled; inference is serialized to avoid competing GPU work.
+
+## Fixes in 1.2.1
+- MediaPipe's WASM factory and packed-assets loader use Smart Skip-specific global names, avoiding the shared Emscripten globals used by other page scripts. The reproducible patch is scripts/patch-hands.cjs; rerun it after replacing the pinned vendor files.
+- MediaPipe informational startup messages use console.info. Warnings and failures remain visible.
+- A failed gesture runtime is disposed before Retry. Extension reload/disconnection stops the old engine, disables stale controls, and asks for an OmeTV tab reload instead of throwing an uncaught context-invalidated error.
+- Browser checks protect the host's generic runtime globals, initialize the real hand model twice, and simulate extension context invalidation.
 
 ## Improvements in 1.2
 - Reuses small canvases (320 px for hands, 384 px for faces), avoids processing the same decoded frame twice, and adapts detection cadence to inference time.
@@ -22,7 +28,7 @@ Three active modes, plus Off:
 Gesture uses the existing local camera video; it does not open another camera stream. Auto requires a playing partner video. Ambiguous video roles wait instead of analyzing the wrong stream. A visible, enabled Next/Skip button is required. Inference pauses in hidden tabs. No video, image, face identity, or landmark data is stored in logs or sent to a server.
 
 ## Validation
-- `npm.cmd test`: 11 tests covering mode combinations, Off cancellation, partial model failure, no-face timing, partner changes, frozen frames, palm rearming, higher-resolution confirmation, hidden/paused video, and packaged assets.
+- `npm.cmd test`: 14 tests covering mode combinations, Off cancellation, partial model failure, no-face timing, partner changes, frozen frames, palm rearming, higher-resolution confirmation, hidden/paused video, and packaged assets.
 - `npm.cmd run test:browser`: uses installed Chrome; runs real local model inference on a blank frame, exercises popup controls and error/loading states, and checks single-click/cooldown, hidden/disabled buttons, and Off behavior. Writes tests/popup-preview.png.
 - Local headless Chrome sample: warm blank-frame inference about 49 ms (hands) / 35 ms (face); first initialization/inference about 15 s / 10 s. Startup varies with shader compilation and machine load. These are smoke measurements, not live-camera accuracy or hardware-wide performance guarantees.
 

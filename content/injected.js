@@ -3,7 +3,7 @@
   'use strict';
   if (window.__OMETV_EXT_INJECTED__) return;
   window.__OMETV_EXT_INJECTED__ = true;
-  const s = { mode: 'off', generation: 0, base: '', hands: null, face: false, loading: {}, busy: false,
+  const s = { mode: 'off', generation: 0, base: '', hands: null, face: false, loading: {}, busy: false, stopped: false,
     local: null, remote: null, stream: null, track: '', settled: 0, absent: null, palm: null,
     released: true, releaseSince: null, lastSkip: 0, nextGesture: 0, nextAuto: 0, statuses: {},
     frames: {}, canvases: {}, timings: {}, lastDiscovery: 0,
@@ -87,17 +87,26 @@
     s.timings[engine] = s.timings[engine] === undefined ? elapsed : s.timings[engine] * .75 + elapsed * .25;
     return Math.round(s.timings[engine]);
   }
+  function closeHands(hands) {
+    if (hands) return Promise.resolve().then(() => hands.close()).catch(() => {});
+    return Promise.resolve();
+  }
+  function releaseHands() { const hands = s.hands; s.hands = null; return closeHands(hands); }
   function load(engine) {
     if (s.loading[engine]) return s.loading[engine];
     s.loading[engine] = Promise.resolve().then(async () => {
+      if (s.stopped) return;
       status(engine, 'loading', 'Loading local model...');
       try {
         if (engine === 'gesture' && !s.hands) {
           const hands = new window.Hands({ locateFile: file => s.base + 'vendor/hands/' + file });
           hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.65, minTrackingConfidence: 0.6 });
           hands.onResults(result => { s.handResult = result; });
-          try { await hands.initialize(); s.hands = hands; }
-          catch (error) { await hands.close().catch(() => {}); throw error; }
+          try {
+            await hands.initialize();
+            if (s.stopped) { await closeHands(hands); return; }
+            s.hands = hands;
+          } catch (error) { await closeHands(hands); throw error; }
         }
         if (engine === 'auto' && !s.face) {
           await window.faceapi.nets.tinyFaceDetector.loadFromUri(s.base + 'models'); s.face = true;
@@ -109,6 +118,7 @@
     return s.loading[engine];
   }
   function setMode(mode, retry = false) {
+    if (s.stopped && mode !== 'off') return;
     if (!['off', 'gesture', 'auto', 'both'].includes(mode) || (mode === s.mode && !retry)) return;
     s.mode = mode; resetChat(); s.palm = null; s.releaseSince = null; s.released = true;
     s.frames = {}; s.nextGesture = 0; s.nextAuto = 0; log(`Mode: ${mode}`);
@@ -152,7 +162,11 @@
               if (Date.now() - s.palm >= s.settings.swipeSensitivity * 10 && skip('gesture')) s.released = false;
             } else s.releaseSince = null;
             status('gesture', 'ready', `${s.released ? 'Hold an open palm to skip' : 'Lower hand to rearm'} · ${timing('gesture', start)} ms`);
-          } catch (error) { s.palm = null; status('gesture', 'error', `Frame failed: ${error.message}`); s.nextGesture = Date.now() + 3000; }
+          } catch (error) {
+            s.palm = null;
+            await releaseHands();
+            if (enabled('gesture')) status('gesture', 'error', `Gesture engine stopped: ${error.message}. Use Retry engines.`);
+          }
         }
       }
       generation = s.generation;
@@ -183,11 +197,16 @@
           } catch (error) { s.absent = null; s.nextAuto = Date.now() + 3000; status('auto', 'error', `Frame failed: ${error.message}`); }
         }
       }
-    } finally { s.busy = false; }
+    } finally { s.busy = false; if (s.stopped) await releaseHands(); }
   }
   window.addEventListener('message', event => {
     if (event.source !== window || event.origin !== location.origin) return;
     const msg = event.data;
+    if (msg?.type === 'OMETV_EXT_STOP') {
+      s.stopped = true; setMode('off'); clearInterval(tickTimer);
+      if (!s.busy) releaseHands();
+      return;
+    }
     if (msg?.type === 'OMETV_EXT_CONFIG') {
       if (typeof msg.base !== 'string' || !/^chrome-extension:\/\/[a-p]{32}\/$/.test(msg.base)) return;
       s.base = msg.base;
@@ -207,6 +226,6 @@
     resetChat(); s.palm = null; s.releaseSince = null; s.frames = {};
     for (const engine of ['gesture', 'auto']) if (enabled(engine)) status(engine, 'waiting', document.hidden ? 'Paused while tab is hidden' : 'Resuming on fresh frames');
   });
-  setInterval(() => { tick().catch(error => log(error.message, 'error')); }, 80);
+  const tickTimer = setInterval(() => { tick().catch(error => log(error.message, 'error')); }, 80);
   emit('INJECTED_READY');
 })();

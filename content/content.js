@@ -2,7 +2,8 @@
   'use strict';
   if (document.getElementById('ometv-ext-hud')) return;
   const defaults = { mode: 'off', swipeSensitivity: 35, faceConfidence: 50, skipOnNoFace: true, noFaceTimeout: 8, skipCount: 0 };
-  let settings = { ...defaults }, lastSkip = 0, connected = false;
+  let settings = { ...defaults }, lastSkip = 0, connected = false, invalidated = false;
+  let healthTimer, syncTimer;
   const statuses = { gesture: 'Off', auto: 'Off' }, logs = [];
   const engineStates = { gesture: 'idle', auto: 'idle' };
   const hud = document.createElement('div');
@@ -24,10 +25,37 @@
     }
     $('ss-count').textContent = `Skips: ${settings.skipCount}`;
   }
-  function sync(retry = false) {
-    window.postMessage({ type: 'OMETV_EXT_CONFIG', mode: settings.mode, settings, base: chrome.runtime.getURL(''), retry }, location.origin);
+  function invalidate() {
+    if (invalidated) return;
+    invalidated = true; connected = false; settings.mode = 'off';
+    clearInterval(healthTimer); clearTimeout(syncTimer);
+    window.postMessage({ type: 'OMETV_EXT_STOP' }, location.origin);
+    for (const engine of ['gesture', 'auto']) {
+      statuses[engine] = 'Extension updated · reload this OmeTV tab'; engineStates[engine] = 'error';
+    }
+    hud.querySelectorAll('button[data-mode], #ss-retry').forEach(button => { button.disabled = true; });
+    log('Extension connection expired. Reload this OmeTV tab to reconnect.'); render();
   }
-  hud.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => chrome.storage.local.set({ mode: btn.dataset.mode })));
+  function withExtension(action) {
+    if (invalidated) return false;
+    try {
+      if (!chrome.runtime?.id) { invalidate(); return false; }
+      action(); return true;
+    } catch (error) {
+      if (/context invalidated/i.test(error.message)) invalidate();
+      else log(`Extension API failed: ${error.message}`, 'error');
+      return false;
+    }
+  }
+  function save(update) {
+    return withExtension(() => chrome.storage.local.set(update, () => {
+      withExtension(() => { if (chrome.runtime.lastError) log(chrome.runtime.lastError.message, 'error'); });
+    }));
+  }
+  function sync(retry = false) {
+    withExtension(() => window.postMessage({ type: 'OMETV_EXT_CONFIG', mode: settings.mode, settings, base: chrome.runtime.getURL(''), retry }, location.origin));
+  }
+  hud.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => save({ mode: btn.dataset.mode })));
   $('ss-collapse').addEventListener('click', () => { $('ss-body').hidden = !$('ss-body').hidden; });
   $('ss-retry').addEventListener('click', () => sync(true));
   function usable(btn) {
@@ -42,17 +70,18 @@
     return [...document.querySelectorAll('#app button, #app [role="button"], #start-button')].find(btn => /^(next|skip)$/i.test(btn.textContent.trim()) && usable(btn));
   }
   function performSkip(reason) {
+    if (!withExtension(() => {})) return false;
     const allowed = reason === 'gesture' ? ['gesture','both'].includes(settings.mode)
       : reason === 'no_face' && settings.skipOnNoFace && ['auto','both'].includes(settings.mode);
     if (!allowed || document.hidden || Date.now() - lastSkip < 2500) return false;
     const button = findNext();
     if (!button) { log('Skip blocked: no enabled Next button', 'error'); return false; }
     lastSkip = Date.now(); button.click();
-    settings.skipCount++; chrome.storage.local.set({ skipCount: settings.skipCount });
+    settings.skipCount++; save({ skipCount: settings.skipCount });
     log(`Skip clicked: ${reason}`); render(); return true;
   }
   window.addEventListener('message', event => {
-    if (event.source !== window || event.origin !== location.origin) return;
+    if (invalidated || event.source !== window || event.origin !== location.origin) return;
     const msg = event.data;
     if (msg?.type === 'OMETV_EXT_INJECTED_READY') { connected = true; sync(); }
     if (msg?.type === 'OMETV_EXT_STATUS' && ['gesture','auto'].includes(msg.engine)) {
@@ -67,6 +96,7 @@
     else if (msg.action === 'retry') { sync(true); respond({ ok: true }); }
   });
   document.addEventListener('click', event => {
+    if (invalidated) return;
     const next = findNext();
     if (event.isTrusted && next && (event.target === next || next.contains(event.target))) {
       lastSkip = Date.now();
@@ -75,12 +105,20 @@
     }
   }, true);
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'local') return;
+    if (invalidated || area !== 'local') return;
     for (const key of Object.keys(defaults)) if (changes[key]) settings[key] = changes[key].newValue ?? defaults[key];
     render(); if (Object.keys(changes).some(key => key !== 'skipCount')) sync();
   });
-  chrome.storage.local.get(defaults, data => { settings = data; render(); sync(); });
+  withExtension(() => chrome.storage.local.get(defaults, data => {
+    withExtension(() => {
+      if (chrome.runtime.lastError) { log(chrome.runtime.lastError.message, 'error'); return; }
+      settings = data; render(); sync();
+    });
+  }));
   // Handles either content-script injection order.
-  setTimeout(() => { sync(); if (!connected) log('Waiting for engine. Reload this tab after updating the extension.', 'error'); }, 2000);
+  if (!invalidated) {
+    syncTimer = setTimeout(() => { sync(); if (!invalidated && !connected) log('Waiting for engine. Reload this tab after updating the extension.', 'error'); }, 2000);
+    healthTimer = setInterval(() => withExtension(() => {}), 1000);
+  }
   render();
 })();
